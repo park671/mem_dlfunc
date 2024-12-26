@@ -88,7 +88,7 @@ static void *fake_dlopen_with_path(const char *libpath, int flags) {
     if (size <= 0) fatal("lseek() failed for %s", libpath);
 
     elf = (Elf64_Ehdr *) mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
-//    LOGD("target so size=%ld", size);
+    LOGD("target so size=%ld", size);
     close(fd);
     fd = -1;
 
@@ -99,7 +99,7 @@ static void *fake_dlopen_with_path(const char *libpath, int flags) {
 
     ctx->load_addr = (void *) load_addr;
 
-//    LOGD("section num=%d", elf->e_shnum);
+    LOGD("section num=%d", elf->e_shnum);
 
     //found .shstrtab first
     shoff = ((char *) elf) + elf->e_shoff;
@@ -117,7 +117,7 @@ static void *fake_dlopen_with_path(const char *libpath, int flags) {
         Elf64_Shdr *sh = (Elf64_Shdr *) shoff;
         switch (sh->sh_type) {
             case SHT_SYMTAB: {
-//                LOGD("symtab found");
+                LOGD("symtab found");
                 if (ctx->symtab) {
                     //skip
                     break;
@@ -130,7 +130,7 @@ static void *fake_dlopen_with_path(const char *libpath, int flags) {
             }
 
             case SHT_DYNSYM: {
-//                LOGD("dynsym found");
+                LOGD("dynsym found");
                 if (ctx->dynsym) {
                     //skip
                     break;
@@ -144,14 +144,14 @@ static void *fake_dlopen_with_path(const char *libpath, int flags) {
             case SHT_STRTAB: {
                 if (strcmp(((((char *) elf) + shstrtab->sh_offset) + sh->sh_name), ".dynstr") ==
                     0) {
-//                    LOGD("dynstr found");
+                    LOGD("dynstr found");
                     ctx->dynstr = malloc(sh->sh_size);
                     if (!ctx->dynstr) fatal("%s: no memory for .dynstr", libpath);
                     memcpy(ctx->dynstr, ((char *) elf) + sh->sh_offset, sh->sh_size);
                 } else if (
                         strcmp(((((char *) elf) + shstrtab->sh_offset) + sh->sh_name), ".strtab") ==
                         0) {
-//                    LOGD("strtab found");
+                    LOGD("strtab found");
                     ctx->strtab = malloc(sh->sh_size);
                     if (!ctx->strtab) fatal("%s: no memory for .strtab", libpath);
                     memcpy(ctx->strtab, ((char *) elf) + sh->sh_offset, sh->sh_size);
@@ -161,7 +161,7 @@ static void *fake_dlopen_with_path(const char *libpath, int flags) {
 
             case SHT_PROGBITS: {
                 if (strcmp(((((char *) elf) + shstrtab->sh_offset) + sh->sh_name), ".text") == 0) {
-//                    LOGD("progbits(.text) found");
+                    LOGD("progbits(.text) found");
                     ctx->bias = (off_t) sh->sh_addr - (off_t) sh->sh_offset;
                 }
                 break;
