@@ -6,40 +6,27 @@
     android:orientation="vertical">
 
     <TextView
-        android:text="art::Thread::RunEmptyCheckpointEv()"
+        android:text="native inline hook"
         android:textColor="@color/black"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
     <Button
-        android:text="test .dynsym"
-        android:id="@+id/dynsymButton"
+        android:text="hook art::DexFile_openDexFileNative()"
+        android:id="@+id/inlineHookButton"
         android:textAllCaps="false"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
     <Button
-        android:text="trigger func"
+        android:text="trigger DexFile.loadDex()"
         android:id="@+id/triggerButton"
         android:textAllCaps="false"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
     <TextView
-        android:text="art::DexFile_openInMemoryDexFilesNative()"
-        android:textColor="@color/black"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <Button
-        android:text="test .symtab"
-        android:id="@+id/symtabButton"
-        android:textAllCaps="false"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <TextView
-        android:text="hook trampoline test"
+        android:text="hook ART trampoline"
         android:id="@+id/trampolineTextView"
         android:textColor="@color/black"
         android:layout_marginTop="10dp"
@@ -54,7 +41,7 @@
         android:layout_height="wrap_content"/>
 
     <Button
-        android:text="inject trampoline"
+        android:text="hook trampoline"
         android:id="@+id/trampolineButton"
         android:textAllCaps="false"
         android:layout_width="wrap_content"

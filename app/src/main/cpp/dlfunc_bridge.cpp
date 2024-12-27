@@ -6,64 +6,61 @@
 #include "executable_mem.h"
 #include "shellcode_arm64.h"
 #include "memory_scanner.h"
+#include "phook.h"
 
 typedef unsigned char byte;
 
-extern "C" void beforeNativeInlineHook() {
-    LOGD("beforeNativeInlineHook()");
+extern "C" void artDexFileOpenDexFileNativeHookDelegate(
+        JNIEnv *env,
+        jclass,
+        jstring javaSourceName,
+        jstring javaOutputName,
+        jint flags,
+        jobject class_loader,
+        jobjectArray dex_elements
+) {
+    LOGD("art::DexFile_openDexFileNative() hook delegate called!");
+    const char *dexFilePath = env->GetStringUTFChars(javaSourceName, nullptr);
+    LOGD("dexFilePath=%s", dexFilePath);
 }
 
-/**
- * art::Thread::RunEmptyCheckpoint()
- * is a .dynsym func, exported
- */
+extern "C" void artThreadNativeCreate(
+        JNIEnv *env,
+        jclass,
+        jobject java_thread,
+        jlong stack_size,
+        jboolean daemon
+) {
+    LOGD("art::Thread_nativeCreate() hook delegate called!");
+}
+
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_park_dlfunc_NativeBridge_testDynSymFunc(JNIEnv *env, jclass clazz) {
+Java_com_park_dlfunc_NativeBridge_inlineHook(JNIEnv *env, jclass clazz) {
     LOGD("test .dynsym func");
-    void *artHandle = dlopen_ex("libart.so", RTLD_NOW);
-    void *func = dlsym_ex(artHandle, "_ZN3artL25DexFile_openDexFileNativeEP7_JNIEnvP7_jclassP8_jstringS5_iP8_jobjectP13_jobjectArray");
-    LOGD("art::DexFile_openDexFileNative() address=%p", func);
-    dlclose_ex(artHandle);
-    if (func == 0) {
+    const char *libName = "libart.so";
+    const char *methodName = "_ZN3artL25DexFile_openDexFileNativeEP7_JNIEnvP7_jclassP8_jstringS5_iP8_jobjectP13_jobjectArray";
+    void *hookDelegatePtr = (void *) artDexFileOpenDexFileNativeHookDelegate;
+    if (hookMethod(libName, methodName, hookDelegatePtr)) {
+        return JNI_TRUE;
+    } else {
         return JNI_FALSE;
     }
-    setTextWritable("libart.so");
-    uint64_t funcAddr = (uint64_t) func;
-    if (isFuncWritable(funcAddr)) {
-        LOGI("make func writable success");
-    } else {
-        LOGE("make func writable fail");
-    }
-    size_t shellCodeByte = 4 * 4;//4inst * 4byte
-    Addr backAddr = funcAddr + shellCodeByte;
-
-    void *copiedBackupHeadInst = malloc(shellCodeByte);
-    Addr beforeHookAddr = (Addr) beforeNativeInlineHook;
-
-    void *inlineHookPtr = createInlineHookStub(func, shellCodeByte, beforeHookAddr, backAddr, 9);
-    LOGD("inline hook ptr:%p", inlineHookPtr);
-    void *jumpCodePtr = createDirectJumpShellCode(9, ((Addr) inlineHookPtr));
-    LOGD("shell code ptr:%p", jumpCodePtr);
-    memcpy(func, jumpCodePtr, shellCodeByte);
-    return func != 0;
 }
 
-/**
- * art::DexFile_openInMemoryDexFilesNative()
- * is a .symtab func, not exported
- */
-extern "C"
-JNIEXPORT jboolean JNICALL
-Java_com_park_dlfunc_NativeBridge_testNonDynSymFunc(JNIEnv *env, jclass clazz) {
-    LOGD("test .symtab func");
-    void *artHandle = dlopen_ex("libart.so", RTLD_NOW);
-    void *func = dlsym_ex(artHandle,
-                          "_ZN3artL34DexFile_openInMemoryDexFilesNativeEP7_JNIEnvP7_jclassP13_jobjectArrayS5_P10_jintArrayS7_P8_jobjectS5");
-    LOGD("art::DexFile_openInMemoryDexFilesNative() address=%p", func);
-    dlclose_ex(artHandle);
-    return func != 0;
-}
+//extern "C"
+//JNIEXPORT jboolean JNICALL
+//Java_com_park_dlfunc_NativeBridge_inlineHook(JNIEnv *env, jclass clazz) {
+//    LOGD("test .dynsym func");
+//    const char *libName = "libart.so";
+//    const char *methodName = "_ZN3artL19Thread_nativeCreateEP7_JNIEnvP7_jclassP8_jobjectlh";
+//    void *hookDelegatePtr = (void *) artThreadNativeCreate;
+//    if (hookMethod(libName, methodName, hookDelegatePtr)) {
+//        return JNI_TRUE;
+//    } else {
+//        return JNI_FALSE;
+//    }
+//}
 
 static void *GetArtMethod(JNIEnv *env, jobject method) {
     jclass methodClass = env->GetObjectClass(method);

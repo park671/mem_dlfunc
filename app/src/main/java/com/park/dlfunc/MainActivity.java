@@ -41,26 +41,33 @@ public class MainActivity extends Activity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this));
-        binding.dynsymButton.setOnClickListener(v -> {
-            if (NativeBridge.testDynSymFunc()) {
-                binding.dynsymButton.setTextColor(Color.GREEN);
+        binding.inlineHookButton.setOnClickListener(v -> {
+            if (NativeBridge.inlineHook()) {
+                Log.d(TAG, "inline hook success");
+                binding.inlineHookButton.setTextColor(Color.GREEN);
             } else {
-                binding.dynsymButton.setTextColor(Color.RED);
+                Log.d(TAG, "inline hook fail");
+                binding.inlineHookButton.setTextColor(Color.RED);
             }
         });
-        binding.symtabButton.setOnClickListener(v -> {
-            if (NativeBridge.testNonDynSymFunc()) {
-                binding.symtabButton.setTextColor(Color.GREEN);
-            } else {
-                binding.symtabButton.setTextColor(Color.RED);
+        binding.triggerButton.setOnClickListener(v -> {
+            Log.d(TAG, "trigger load dex start");
+            try {
+                AssetUtils.copyAssetToFilesDir(MainActivity.this, "test.dex", null);
+                String path = getFilesDir() + "/test.dex";
+                DexFile dexFile = DexFile.loadDex(path, null, 0);
+                Log.d(TAG, "load dex success: " + dexFile.getName());
+            } catch (Throwable tr) {
+                Log.e(TAG, "error", tr);
             }
+            Log.d(TAG, "trigger load dex finish");
         });
 
         binding.invokeTargetButton.setOnClickListener(v -> {
             new Thread(() -> {
-                Log.d(TAG, "target start");
+                Log.d(TAG, "thread start");
                 TargetClass.func0(1, 7);
-                Log.d(TAG, "target finish");
+                Log.d(TAG, "thread finish");
             }).start();
         });
         binding.trampolineButton.setOnClickListener(v -> {
@@ -69,16 +76,6 @@ public class MainActivity extends Activity {
                 NativeBridge.injectTrampoline(func0);
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException(e);
-            }
-        });
-
-        binding.triggerButton.setOnClickListener(v -> {
-            try {
-                AssetUtils.copyAssetToFilesDir(MainActivity.this, "test.dex", null);
-                String path = getFilesDir() + "/test.dex";
-                DexFile.loadDex(path, null, 0);
-            } catch (Throwable tr) {
-                Log.e(TAG, "error", tr);
             }
         });
         setContentView(binding.getRoot());

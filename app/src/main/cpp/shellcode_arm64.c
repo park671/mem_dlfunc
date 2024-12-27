@@ -26,8 +26,7 @@ void *createDirectJumpShellCode(uint8_t regIndex, Addr targetAddress) {
     return result;
 }
 
-void *
-createInlineHookStub(void *backupFuncAddr,
+void * createInlineHookStub(void *backupFuncAddr,
                      size_t copySize,
                      Addr hookBeforeFuncAddr,
                      Addr backAddr,

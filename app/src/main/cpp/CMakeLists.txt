@@ -11,7 +11,8 @@ set(CMAKE_CXX_FLAGS -O0)
 
 file(GLOB_RECURSE
         DL_FUNC_DIR
-        "*.c" "*.cpp" "*.cc" "*.S" "*.s"
+        "*.c"
+        "*.cpp" "*.cc" "*.S" "*.s"
 )
 
 add_library(

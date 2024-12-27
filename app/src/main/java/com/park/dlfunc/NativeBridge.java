@@ -8,9 +8,7 @@ public class NativeBridge {
         System.loadLibrary("dlfunc");
     }
 
-    public static native boolean testDynSymFunc();
-
-    public static native boolean testNonDynSymFunc();
+    public static native boolean inlineHook();
 
     public static native boolean initEnv(Method m1, Method m2);
 

@@ -6,13 +6,13 @@ public class TargetClass {
     private static final String TAG = "TargetClass";
 
     public static void func0(int a, int b) {
-        Log.d(TAG, "func0(): 1st " + a + "," + b);
+        Log.d(TAG, "func0(): 1st print " + a + "," + b);
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        Log.d(TAG, "func0(): 2nd " + a + "," + b);
+        Log.d(TAG, "func0(): 2nd print " + a + "," + b);
     }
 
     public static int func1(int a, int b) {
