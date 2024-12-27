@@ -14,6 +14,8 @@ extern "C" {
 
 void *createDirectJumpShellCode(uint8_t regIndex, Addr targetAddress);
 
+void *createInlineHookStub(void* backupFuncAddr, size_t copySize, Addr hookBeforeFuncAddr, Addr backAddr, uint8_t regIndex);
+
 #ifdef __cplusplus
 };
 #endif

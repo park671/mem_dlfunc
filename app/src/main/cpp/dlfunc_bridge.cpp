@@ -9,6 +9,10 @@
 
 typedef unsigned char byte;
 
+extern "C" void beforeNativeInlineHook() {
+    LOGD("beforeNativeInlineHook()");
+}
+
 /**
  * art::Thread::RunEmptyCheckpoint()
  * is a .dynsym func, exported
@@ -18,8 +22,8 @@ JNIEXPORT jboolean JNICALL
 Java_com_park_dlfunc_NativeBridge_testDynSymFunc(JNIEnv *env, jclass clazz) {
     LOGD("test .dynsym func");
     void *artHandle = dlopen_ex("libart.so", RTLD_NOW);
-    void *func = dlsym_ex(artHandle, "_ZN3art6Thread18RunEmptyCheckpointEv");
-    LOGD("art::Thread::RunEmptyCheckpoint() address=%p", func);
+    void *func = dlsym_ex(artHandle, "_ZN3artL25DexFile_openDexFileNativeEP7_JNIEnvP7_jclassP8_jstringS5_iP8_jobjectP13_jobjectArray");
+    LOGD("art::DexFile_openDexFileNative() address=%p", func);
     dlclose_ex(artHandle);
     if (func == 0) {
         return JNI_FALSE;
@@ -31,6 +35,17 @@ Java_com_park_dlfunc_NativeBridge_testDynSymFunc(JNIEnv *env, jclass clazz) {
     } else {
         LOGE("make func writable fail");
     }
+    size_t shellCodeByte = 4 * 4;//4inst * 4byte
+    Addr backAddr = funcAddr + shellCodeByte;
+
+    void *copiedBackupHeadInst = malloc(shellCodeByte);
+    Addr beforeHookAddr = (Addr) beforeNativeInlineHook;
+
+    void *inlineHookPtr = createInlineHookStub(func, shellCodeByte, beforeHookAddr, backAddr, 9);
+    LOGD("inline hook ptr:%p", inlineHookPtr);
+    void *jumpCodePtr = createDirectJumpShellCode(9, ((Addr) inlineHookPtr));
+    LOGD("shell code ptr:%p", jumpCodePtr);
+    memcpy(func, jumpCodePtr, shellCodeByte);
     return func != 0;
 }
 

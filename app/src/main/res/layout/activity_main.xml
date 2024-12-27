@@ -18,6 +18,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
+    <Button
+        android:text="trigger func"
+        android:id="@+id/triggerButton"
+        android:textAllCaps="false"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
     <TextView
         android:text="art::DexFile_openInMemoryDexFilesNative()"
         android:textColor="@color/black"

@@ -13,6 +13,8 @@ import com.park.dlfunc.databinding.ActivityMainBinding;
 
 import java.lang.reflect.Method;
 
+import dalvik.system.DexFile;
+
 public class MainActivity extends Activity {
 
     private static final String TAG = "MainActivity";
@@ -67,6 +69,16 @@ public class MainActivity extends Activity {
                 NativeBridge.injectTrampoline(func0);
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException(e);
+            }
+        });
+
+        binding.triggerButton.setOnClickListener(v -> {
+            try {
+                AssetUtils.copyAssetToFilesDir(MainActivity.this, "test.dex", null);
+                String path = getFilesDir() + "/test.dex";
+                DexFile.loadDex(path, null, 0);
+            } catch (Throwable tr) {
+                Log.e(TAG, "error", tr);
             }
         });
         setContentView(binding.getRoot());
