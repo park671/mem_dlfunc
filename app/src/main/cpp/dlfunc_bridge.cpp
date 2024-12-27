@@ -5,6 +5,7 @@
 #include "art_13_0.h"
 #include "executable_mem.h"
 #include "shellcode_arm64.h"
+#include "memory_scanner.h"
 
 typedef unsigned char byte;
 
@@ -20,6 +21,16 @@ Java_com_park_dlfunc_NativeBridge_testDynSymFunc(JNIEnv *env, jclass clazz) {
     void *func = dlsym_ex(artHandle, "_ZN3art6Thread18RunEmptyCheckpointEv");
     LOGD("art::Thread::RunEmptyCheckpoint() address=%p", func);
     dlclose_ex(artHandle);
+    if (func == 0) {
+        return JNI_FALSE;
+    }
+    setTextWritable("libart.so");
+    uint64_t funcAddr = (uint64_t) func;
+    if (isFuncWritable(funcAddr)) {
+        LOGI("make func writable success");
+    } else {
+        LOGE("make func writable fail");
+    }
     return func != 0;
 }
 
@@ -51,6 +62,8 @@ static void *GetArtMethod(JNIEnv *env, jobject method) {
 static constexpr uint32_t kAccPublic = 0x0001;  // class, field, method, ic
 static constexpr uint32_t kAccPrivate = 0x0002;  // field, method, ic
 static constexpr uint32_t kAccProtected = 0x0004;  // field, method, ic
+static uint32_t kAccPreCompiled = 0x00200000;
+static uint32_t kAccCompileDontBother = 0x02000000;
 
 bool verifyMethodSize(JNIEnv *env, jobject method1, jobject method2) {
     void *artMethod1 =
@@ -87,12 +100,21 @@ extern "C" Addr getBackupMethodPtr() {
     return ((Addr) shell_code_func);
 }
 
+extern "C" void
+printRegister(uint64_t p0, uint64_t p1, uint64_t p2, uint64_t p3, uint64_t p4, uint64_t p5,
+              uint64_t p6, uint64_t p7) {
+    LOGD("reg: [%02lX,%02lX,%02lX,%02lX,%02lX,%02lX,%02lX,%02lX]", p0, p1, p2, p3, p4, p5, p6, p7);
+}
+
 extern "C" void parkHookBefore() {
+    asm("bl printRegister");
+    inHookArtMethod->ptr_sized_fields_.entry_point_from_quick_compiled_code_ = backup_method_ptr;
     LOGD("parkHookBefore()");
 }
 
 extern "C" void parkHookAfter() {
     LOGD("parkHookAfter()");
+    inHookArtMethod->ptr_sized_fields_.entry_point_from_quick_compiled_code_ = hook_stub_method_ptr;
 }
 
 extern "C" void
@@ -103,6 +125,10 @@ JNIEXPORT jboolean JNICALL
 Java_com_park_dlfunc_NativeBridge_injectTrampoline(JNIEnv *env, jclass clazz, jobject method) {
     void *artMethod1 = GetArtMethod(env, method);
     inHookArtMethod = static_cast<art::mirror::ArtMethod *>(artMethod1);
+
+    inHookArtMethod->access_flags_ |= kAccCompileDontBother;
+    inHookArtMethod->access_flags_ &= ~kAccPreCompiled;
+
     backup_method_ptr = inHookArtMethod->ptr_sized_fields_.entry_point_from_quick_compiled_code_;
     LOGD("origin quick=%p", backup_method_ptr);
     Addr origin_addr_val = (Addr) backup_method_ptr;

@@ -9,7 +9,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_C_FLAGS -O0)
 set(CMAKE_CXX_FLAGS -O0)
 
-file(GLOB_RECURSE DL_FUNC_DIR
+file(GLOB_RECURSE
+        DL_FUNC_DIR
         "*.c" "*.cpp" "*.cc" "*.S" "*.s"
 )
 
