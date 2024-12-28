@@ -7,13 +7,17 @@
 
 #include "stdbool.h"
 
+struct PHookHandle {
+    void *backup;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-bool hookMethod(const char *libName, const char *methodName, void *hookDelegate);
+struct PHookHandle *hookMethod(const char *libName, const char *methodName, void *hookDelegate);
 
-bool unhookMethod();
+bool unhookMethod(struct PHookHandle *);
 
 #ifdef __cplusplus
 };

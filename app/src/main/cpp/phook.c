@@ -14,13 +14,13 @@
 #include "memory_scanner.h"
 #include "shellcode_arm64.h"
 
-bool hookMethod(const char *libName, const char *methodName, void *hookDelegate) {
+struct PHookHandle *hookMethod(const char *libName, const char *methodName, void *hookDelegate) {
     void *artHandle = dlopen_ex(libName, RTLD_NOW);
     void *func = dlsym_ex(artHandle, methodName);
     LOGD("backup address=%p", func);
     dlclose_ex(artHandle);
     if (func == 0) {
-        return JNI_FALSE;
+        return NULL;
     }
     setTextWritable(libName);
     uint64_t funcAddr = (uint64_t) func;
@@ -35,14 +35,26 @@ bool hookMethod(const char *libName, const char *methodName, void *hookDelegate)
     void *copiedBackupHeadInst = malloc(shellCodeByte);
     Addr beforeHookAddr = (Addr) hookDelegate;
 
-    void *inlineHookPtr = createInlineHookStub(func, shellCodeByte, beforeHookAddr, backAddr, 9);
-    LOGD("inline hook ptr:%p", inlineHookPtr);
-    void *jumpCodePtr = createDirectJumpShellCode(9, ((Addr) inlineHookPtr));
+    void *jumpBackFuncPtr = createInlineHookJumpBack(func, shellCodeByte, backAddr, 9);
+    if (jumpBackFuncPtr == NULL) {
+        LOGE("can not create jump back code");
+        return NULL;
+    }
+//    void *inlineHookPtr = createInlineHookStub(func, shellCodeByte, beforeHookAddr, backAddr, 9);
+    LOGD("inline hook jump back ptr:%p", jumpBackFuncPtr);
+    void *jumpCodePtr = createDirectJumpShellCode(9, ((Addr) beforeHookAddr));
+    if (jumpCodePtr == NULL) {
+        LOGE("can not create direct jump shell code");
+        return NULL;
+    }
     LOGD("shell code ptr:%p", jumpCodePtr);
     memcpy(func, jumpCodePtr, shellCodeByte);
-    return func != 0;
+    LOGI("origin func rewrite success");
+    struct PHookHandle *pHookHandle = (struct PHookHandle *) malloc(sizeof(struct PHookHandle));
+    pHookHandle->backup = jumpBackFuncPtr;
+    return pHookHandle;
 }
 
-bool unhookMethod() {
+bool unhookMethod(struct PHookHandle *) {
     //todo impl unhook
 }

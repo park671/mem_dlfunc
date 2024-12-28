@@ -8,11 +8,11 @@
 #include "memory_scanner.h"
 #include "phook.h"
 
-typedef unsigned char byte;
+static struct PHookHandle *pHookHandle = nullptr;
 
-extern "C" void artDexFileOpenDexFileNativeHookDelegate(
+extern "C" jobject artDexFileOpenDexFileNativeHookDelegate(
         JNIEnv *env,
-        jclass,
+        jclass clazz,
         jstring javaSourceName,
         jstring javaOutputName,
         jint flags,
@@ -20,8 +20,29 @@ extern "C" void artDexFileOpenDexFileNativeHookDelegate(
         jobjectArray dex_elements
 ) {
     LOGD("art::DexFile_openDexFileNative() hook delegate called!");
-    const char *dexFilePath = env->GetStringUTFChars(javaSourceName, nullptr);
+
+    char *dexFilePath = (char *) env->GetStringUTFChars(javaSourceName, nullptr);
     LOGD("dexFilePath=%s", dexFilePath);
+
+    //invoke origin func
+    jobject result = ((jobject (*)(
+            JNIEnv *env,
+            jclass,
+            jstring,
+            jstring,
+            jint,
+            jobject,
+            jobjectArray
+    )) pHookHandle->backup)(
+            env,
+            clazz,
+            javaSourceName,
+            javaOutputName,
+            flags,
+            class_loader,
+            dex_elements
+    );
+    return result;
 }
 
 extern "C" void artThreadNativeCreate(
@@ -41,7 +62,8 @@ Java_com_park_dlfunc_NativeBridge_inlineHook(JNIEnv *env, jclass clazz) {
     const char *libName = "libart.so";
     const char *methodName = "_ZN3artL25DexFile_openDexFileNativeEP7_JNIEnvP7_jclassP8_jstringS5_iP8_jobjectP13_jobjectArray";
     void *hookDelegatePtr = (void *) artDexFileOpenDexFileNativeHookDelegate;
-    if (hookMethod(libName, methodName, hookDelegatePtr)) {
+    pHookHandle = hookMethod(libName, methodName, hookDelegatePtr);
+    if (pHookHandle != nullptr) {
         return JNI_TRUE;
     } else {
         return JNI_FALSE;

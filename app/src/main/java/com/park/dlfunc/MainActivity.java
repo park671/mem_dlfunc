@@ -35,6 +35,7 @@ public class MainActivity extends Activity {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+        AssetUtils.copyAssetToFilesDir(MainActivity.this, "test.dex", null);
     }
 
     @Override
@@ -53,7 +54,6 @@ public class MainActivity extends Activity {
         binding.triggerButton.setOnClickListener(v -> {
             Log.d(TAG, "trigger load dex start");
             try {
-                AssetUtils.copyAssetToFilesDir(MainActivity.this, "test.dex", null);
                 String path = getFilesDir() + "/test.dex";
                 DexFile dexFile = DexFile.loadDex(path, null, 0);
                 Log.d(TAG, "load dex success: " + dexFile.getName());

@@ -9,7 +9,10 @@
 #include "stdint.h"
 #include "log.h"
 
-void *createDirectJumpShellCode(uint8_t regIndex, Addr targetAddress) {
+void *createDirectJumpShellCode(
+        uint8_t regIndex,
+        Addr targetAddress
+) {
     if (regIndex & ~0x1F) {
         LOGE("invalid reg: %d", regIndex);
         return NULL;
@@ -26,11 +29,16 @@ void *createDirectJumpShellCode(uint8_t regIndex, Addr targetAddress) {
     return result;
 }
 
-void * createInlineHookStub(void *backupFuncAddr,
-                     size_t copySize,
-                     Addr hookBeforeFuncAddr,
-                     Addr backAddr,
-                     uint8_t regIndex
+/**
+ * this stub can not modify the params.
+ * only trigger
+ */
+void *createInlineHookStub(
+        void *backupFuncPtr,
+        size_t copySize,
+        Addr hookBeforeFuncAddr,
+        Addr backAddr,
+        uint8_t regIndex
 ) {
     if (regIndex & ~0x1F) {
         LOGE("invalid reg: %d", regIndex);
@@ -58,7 +66,7 @@ void * createInlineHookStub(void *backupFuncAddr,
     size_t inlineHookStubSize = copySize + sizeof(Inst) * 26;//copy data + hook stub 4+ 4
     LOGD("inlineHookStubSize=%zu", inlineHookStubSize);
     Inst *inlineHookStub = (Inst *) malloc(inlineHookStubSize);
-    memcpy(inlineHookStub, backupFuncAddr, copySize);
+    memcpy(inlineHookStub, backupFuncPtr, copySize);
 
     int stubInstStartIndex = copySize / 4;
     const int spRegIndex = 31;
@@ -112,6 +120,59 @@ void * createInlineHookStub(void *backupFuncAddr,
 
     //back
     ((uint64_t *) inlineHookStub)[addrBeforeIndex + 1] = backAddr;
+
+    void *result = createExecutableMemory((unsigned char *) inlineHookStub, inlineHookStubSize);
+    free(inlineHookStub);
+    return result;
+}
+
+/**
+ * this stub real impl hook delegate
+ */
+void *createInlineHookJumpBack(
+        void *backupFuncAddr,
+        size_t copySize,
+        Addr backAddr,
+        uint8_t regIndex
+) {
+    if (regIndex & ~0x1F) {
+        LOGE("invalid reg: %d", regIndex);
+        return NULL;
+    }
+    /**
+     * code structure:
+         A,
+         B,
+         C,
+         D,
+         [ldr Xn, back]
+         [br Xn]
+         back_low,//29
+         back_high
+     **/
+    size_t inlineHookStubSize = copySize + sizeof(Inst) * 4;//copy data + hook stub 4
+    LOGD("createInlineHookJumpBack=%zu", inlineHookStubSize);
+    Inst *inlineHookStub = (Inst *) malloc(inlineHookStubSize);
+    memcpy(inlineHookStub, backupFuncAddr, copySize);
+
+    int stubInstStartIndex = copySize / 4;
+    const int spRegIndex = 31;
+    const Inst instNop = 0xd503201f;//todo debug only
+
+    //[ldr Xn, back]
+    Inst instLdrBack = 0x58000000;
+    instLdrBack |= regIndex;
+    instLdrBack |= 2 << 5;//4 pc offset
+    inlineHookStub[stubInstStartIndex++] = instLdrBack;
+
+    //[br Xn]
+    Inst instBr = 0xD61F0000;
+    instBr |= regIndex << 5;
+    inlineHookStub[stubInstStartIndex++] = instBr;
+
+    int addrBeforeIndex = stubInstStartIndex / 2;
+    //back
+    ((uint64_t *) inlineHookStub)[addrBeforeIndex] = backAddr;
 
     void *result = createExecutableMemory((unsigned char *) inlineHookStub, inlineHookStubSize);
     free(inlineHookStub);

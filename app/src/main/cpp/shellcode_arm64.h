@@ -12,9 +12,25 @@ typedef uint64_t Addr;
 extern "C" {
 #endif
 
-void *createDirectJumpShellCode(uint8_t regIndex, Addr targetAddress);
+void *createDirectJumpShellCode(
+        uint8_t regIndex,
+        Addr targetAddress
+);
 
-void *createInlineHookStub(void* backupFuncAddr, size_t copySize, Addr hookBeforeFuncAddr, Addr backAddr, uint8_t regIndex);
+void *createInlineHookStub(
+        void *backupFuncPtr,
+        size_t copySize,
+        Addr hookBeforeFuncAddr,
+        Addr backAddr,
+        uint8_t regIndex
+);
+
+void *createInlineHookJumpBack(
+        void *backupFuncAddr,
+        size_t copySize,
+        Addr backAddr,
+        uint8_t regIndex
+);
 
 #ifdef __cplusplus
 };
